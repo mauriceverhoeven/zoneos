@@ -48,7 +48,7 @@ class ZoneOS {
       const data = await resp.json();
       this.nowPlayingInfo = data;
 
-      const title = data.title || "No music playing";
+      const title = data.title || "Geen muziek aan";
       const artist = data.artist || "";
       const albumArt = data.album_art || "";
 
@@ -212,11 +212,11 @@ class ZoneOS {
           </div>
         `;
       } else {
-        container.innerHTML = this.createEmptyState("No speakers found");
+        container.innerHTML = this.createEmptyState("Geen speakers gevonden");
       }
     } catch (error) {
       container.innerHTML = this.createErrorState(
-        `Failed to load speakers: ${error.message}`
+        `Speakers laden mislukt: ${error.message}`
       );
     }
   }
@@ -250,7 +250,7 @@ class ZoneOS {
                     <button 
                         onclick="event.stopPropagation(); app.adjustVolume('${escaped}', -5)"
                         class="w-8 h-8 bg-white/20 hover:bg-white/30 text-white rounded-full font-bold text-lg transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
-                        title="Volume Down"
+                        title="Volume omlaag"
                     >
                         −
                     </button>
@@ -258,7 +258,7 @@ class ZoneOS {
                     <button 
                         onclick="event.stopPropagation(); app.adjustVolume('${escaped}', 5)"
                         class="w-8 h-8 bg-white/20 hover:bg-white/30 text-white rounded-full font-bold text-lg transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
-                        title="Volume Up"
+                        title="Volume omhoog"
                     >
                         +
                     </button>
@@ -311,7 +311,7 @@ class ZoneOS {
   }
 
   /**
-   * Adjust speaker volume
+   * Adjust speaker volume in steps of 5, rounded to modulo 5
    */
   async adjustVolume(speaker, delta) {
     try {
@@ -320,7 +320,15 @@ class ZoneOS {
       );
       const volData = await volResp.json();
       const currentVol = volData.volume || 50;
-      const newVol = Math.max(0, Math.min(100, currentVol + delta));
+      
+      // Calculate new volume
+      let newVol = currentVol + delta;
+      
+      // Round to nearest multiple of 5
+      newVol = Math.round(newVol / 5) * 5;
+      
+      // Clamp to 0-100 range
+      newVol = Math.max(0, Math.min(100, newVol));
 
       await fetch("/api/volume", {
         method: "POST",
@@ -335,7 +343,7 @@ class ZoneOS {
         volumeElement.textContent = `${newVol}%`;
       }
     } catch (error) {
-      console.error("Failed to adjust volume:", error);
+      console.error("Volume aanpassen mislukt:", error);
     }
   }
 
@@ -357,11 +365,11 @@ class ZoneOS {
         container.innerHTML = `<div class="grid gap-3">${items.join("")}</div>`;
         this.highlightCurrentFavorite();
       } else {
-        container.innerHTML = this.createEmptyState("No favorites found", true);
+        container.innerHTML = this.createEmptyState("Geen favorieten gevonden", true);
       }
     } catch (error) {
       container.innerHTML = this.createErrorState(
-        `Failed to load favorites: ${error.message}`
+        `Favorieten laden mislukt: ${error.message}`
       );
     }
   }
@@ -406,7 +414,7 @@ class ZoneOS {
    */
   async playFavorite(index) {
     if (this.selectedSpeakers.size === 0) {
-      alert("Please select at least one speaker");
+      alert("Selecteer tenminste één speaker");
       return;
     }
 
@@ -419,14 +427,14 @@ class ZoneOS {
 
       if (!resp.ok) {
         const data = await resp.json();
-        console.error("Failed to play:", data.error);
+        console.error("Afspelen mislukt:", data.error);
         return;
       }
 
       // Update now playing immediately
       setTimeout(() => this.updateNowPlaying(), 1000);
     } catch (error) {
-      console.error("Failed to play favorite:", error);
+      console.error("Favoriet afspelen mislukt:", error);
     }
   }
 
@@ -448,11 +456,11 @@ class ZoneOS {
         this.highlightCurrentFavorite();
       } else {
         document.getElementById("favorites-container").innerHTML =
-          this.createErrorState(data.error || "Failed to refresh");
+          this.createErrorState(data.error || "Vernieuwen mislukt");
       }
     } catch (error) {
       document.getElementById("favorites-container").innerHTML =
-        this.createErrorState(`Failed to refresh: ${error.message}`);
+        this.createErrorState(`Vernieuwen mislukt: ${error.message}`);
     } finally {
       btn.disabled = false;
       icon.classList.remove("animate-spin");

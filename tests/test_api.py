@@ -153,6 +153,7 @@ def test_set_volume_success(client_with_controller, mock_controller):
     )
 
     assert response.status_code == 200
+    # Volume is rounded to nearest 5, so 75 stays 75
     mock_controller.set_volume.assert_called_once_with("Living Room", 75)
 
 

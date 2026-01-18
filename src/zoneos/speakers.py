@@ -65,6 +65,8 @@ class SpeakerManager:
 
     def set_volume(self, speaker_name: str, volume: int) -> None:
         """Set volume for the specified speaker (0-100).
+        
+        Volume is automatically rounded to the nearest multiple of 5.
 
         Args:
             speaker_name: Name of the speaker
@@ -75,8 +77,12 @@ class SpeakerManager:
             SoCoException: If volume setting fails
         """
         speaker = self.get_speaker(speaker_name)
-        speaker.volume = max(0, min(100, volume))
-        logger.info(f"Set volume to {volume} on {speaker_name}")
+        # Round to nearest multiple of 5
+        rounded_volume = round(volume / 5) * 5
+        # Clamp to 0-100 range
+        clamped_volume = max(0, min(100, rounded_volume))
+        speaker.volume = clamped_volume
+        logger.info(f"Set volume to {clamped_volume} on {speaker_name}")
 
     def get_volume(self, speaker_name: str) -> int:
         """Get current volume for the specified speaker.

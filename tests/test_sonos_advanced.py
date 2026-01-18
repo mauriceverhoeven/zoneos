@@ -81,7 +81,7 @@ def test_control_playback_exception(mock_soco_discover, mock_speaker):
 
 
 def test_set_volume_boundary_values(mock_soco_discover, mock_speaker):
-    """Test setting volume with boundary values."""
+    """Test setting volume with boundary values and rounding to modulo 5."""
     mock_soco_discover.return_value = [mock_speaker]
     controller = SonosController()
 
@@ -93,13 +93,26 @@ def test_set_volume_boundary_values(mock_soco_discover, mock_speaker):
     controller.set_volume("Living Room", 100)
     assert mock_speaker.volume == 100
 
-    # Test clamping above max
+    # Test clamping above max (rounds to 150 -> 150, clamps to 100)
     controller.set_volume("Living Room", 150)
     assert mock_speaker.volume == 100
 
-    # Test clamping below min
+    # Test clamping below min (rounds to -10 -> -10, clamps to 0)
     controller.set_volume("Living Room", -10)
     assert mock_speaker.volume == 0
+    
+    # Test rounding to nearest 5
+    controller.set_volume("Living Room", 23)  # Should round to 25
+    assert mock_speaker.volume == 25
+    
+    controller.set_volume("Living Room", 22)  # Should round to 20
+    assert mock_speaker.volume == 20
+    
+    controller.set_volume("Living Room", 27)  # Should round to 25
+    assert mock_speaker.volume == 25
+    
+    controller.set_volume("Living Room", 28)  # Should round to 30
+    assert mock_speaker.volume == 30
 
 
 def test_get_volume_exception(mock_soco_discover, mock_speaker):
