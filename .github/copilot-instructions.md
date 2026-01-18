@@ -8,21 +8,36 @@ ZoneOS is a Python-based bridge that connects Sonos speakers with iPhone automat
 
 ### Core Components
 
-- **SonosController** (`src/zoneos/sonos.py`): Manages speaker discovery and control using the SoCo library
-- **Flask Server** (`src/zoneos/api.py`): Lightweight REST API with endpoints for speaker control, playback, and volume
-- **Web Frontend** (`static/index.html`): Single-page interface for testing and manual control
+**Modular Design (Refactored)**:
+
+- **SpeakerManager** (`src/zoneos/speakers.py`): Handles speaker discovery and basic operations
+- **FavoritesManager** (`src/zoneos/favorites.py`): Manages favorites and radio stations
+- **GroupManager** (`src/zoneos/groups.py`): Coordinates multi-room audio groups
+- **PlaybackController** (`src/zoneos/playback.py`): Controls playback operations
+- **SonosController** (`src/zoneos/controller.py`): Main facade coordinating all managers
+- **Flask Server** (`src/zoneos/api.py`): REST API with endpoints for speaker control
+- **Config** (`src/zoneos/config.py`): Centralized configuration from environment variables
+- **Exceptions** (`src/zoneos/exceptions.py`): Custom exception hierarchy
+- **Web Frontend** (`static/index.html`): Single-page interface for testing
+
+**Legacy Module**:
+
+- **sonos.py**: Original monolithic controller (deprecated, kept for backward compatibility)
 
 ### Data Flow
 
 1. NFC tag scanned → iPhone Shortcuts app → HTTP request to ZoneOS API
-2. API validates request → SonosController executes action → Sonos speaker responds
+2. API validates request → SonosController delegates to appropriate manager → Manager executes action → Sonos speaker responds
 3. Web interface provides manual control and system testing
 
 ### Key Design Decisions
 
-- **Global controller**: Single `SonosController` instance initialized at startup for efficient speaker management
-- **Discovery on init**: Speakers discovered once at startup; restart server if network topology changes
+- **Modular architecture**: Each component has a single responsibility
+- **Custom exceptions**: Clear error propagation with specific exception types
+- **Configuration management**: Environment-based config for deployment flexibility
+- **Manager pattern**: SonosController acts as a facade, delegating to specialized managers
 - **Stateless API**: Each request is independent; no session management required
+- **Discovery on init**: Speakers discovered once at startup; restart server if network topology changes
 
 ## Development Workflow
 
@@ -78,8 +93,28 @@ NFC tags trigger shortcuts that call these endpoints with speaker and action par
 - Use **ruff** for linting (configured in pyproject.toml)
 - Python 3.11+ required for modern type hints (`dict[str, SoCo]` instead of `Dict[str, SoCo]`)
 - Line length: 100 characters
+- Use dataclasses for configuration objects
+- Prefer explicit exceptions over returning `None` for errors in new code
 
 ### Error Handling Pattern
+
+**New pattern (with custom exceptions)**:
+
+```python
+from zoneos.exceptions import SpeakerNotFoundError
+
+try:
+    speaker = speaker_manager.get_speaker(name)
+    speaker.play()
+except SpeakerNotFoundError as e:
+    logger.error(f"Speaker error: {e}")
+    raise
+except SoCoException as e:
+    logger.error(f"SoCo error: {e}")
+    raise PlaybackError(f"Failed to play: {e}")
+```
+
+**Legacy pattern (returns bool)**:
 
 ```python
 try:
@@ -97,33 +132,66 @@ except SoCoException as e:
 ```python
 # Success response
 return jsonify({"status": "ok", "message": "Action completed"})
-
-# Error handling with status code
-if not success:
-    return jsonify({"error": "Action failed"}), 400
+main.py           # Entry point (Flask app initialization)
+│   ├── config.py         # Configuration management
+│   ├── controller.py     # Main controller (refactored)
+│   ├── api.py            # Flask routes and request handling
+│   ├── exceptions.py     # Custom exception classes
+│   ├── speakers.py       # Speaker discovery and management
+│   ├── favorites.py      # Favorites management
+│   ├── groups.py         # Group management
+│   ├── playback.py       # Playback control
+│   └── sonos.py          # Legacy monolithic controller (deprecated)
+├── static/               # Frontend assets
+│   └── index.html        # Single-page web UI
+├── tests/                # Pytest test suite
+│   ├── conftest.py       # Shared fixtures and mocks
+│   ├── test_api.py       # API endpoint tests
+│   ├── test_sonos.py     # Basic controller tests
+│   └── test_sonos_advanced.py  # Advanced functionality
 ```
 
 ### Logging
 
 - Use module-level logger: `logger = logging.getLogger(__name__)`
-- Log speaker operations at INFO level
-- Log errors at ERROR level with context
+- Log speaker operations at INFO leveappropriate `sonos_controller` method
 
-## Project Structure
+4. Handle exceptions and return `jsonify()` response with status code
 
-```
-zoneos/
-├── src/zoneos/           # Main package
-│   ├── __init__.py       # Package version
-│   ├── __main__.py       # Entry point (Flask app initialization)
-│   ├── api.py            # Flask routes and request handling
-│   └── sonos.py          # SoCo wrapper and speaker management
-├── static/               # Frontend assets
-│   └── index.html        # Single-page web UI
-├── tests/                # Pytest test suite
-│   └── test_sonos.py     # SonosController tests
-├── pyproject.toml        # uv/pip dependencies, ruff config
-└── .python-version       # Python version (3.11)
+### Adding a New Manager Method
+
+1. Add method to appropriate manager class (speakers.py, favorites.py, groups.py, playback.py)
+2. Raise custom exceptions from `exceptions.py` for error cases
+3. Add comprehensive logging at INFO and ERROR levels
+4. Update `controller.py` to expose the method if needed for API
+
+### Testing Sonos Operations
+
+- Use `mock_soco_discover` fixture to avoid real network calls
+- Create `mock_speaker` fixtures with required attributes
+- Verify both success and exception paths in tests
+- Test edge cases (empty lists, invalid indices, missing speakers)
+- Aim for 90%+ coverage on new code
+
+### Adding Configuration Options
+
+1. Add field to `Config` dataclass in `config.py`
+2. Add environment variable support in `from_env()` method
+3. Document new env var in README.md
+4. Use `config.field_name` in code to access value
+
+### Debugging Speaker Issues
+
+- Check logs for discovery messages at startup
+- Verify speakers are on same network as server
+- Use `/api/speakers` endpoint to list discovered speakers
+- Restart server to re-discover if network changes
+- Check group status with `/api/group-status` endpoint
+  ├── tests/ # Pytest test suite
+  │ └── test_sonos.py # SonosController tests
+  ├── pyproject.toml # uv/pip dependencies, ruff config
+  └── .python-version # Python version (3.11)
+
 ```
 
 ## Key Dependencies
@@ -152,3 +220,4 @@ zoneos/
 - Verify speakers are on same network as server
 - Use `/api/speakers` endpoint to list discovered speakers
 - Restart server to re-discover if network changes
+```

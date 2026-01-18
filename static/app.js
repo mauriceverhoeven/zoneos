@@ -153,11 +153,15 @@ class ZoneOS {
       if (!fav) return;
 
       // Check both title and URI match (either can trigger highlight)
-      const titleMatches = this.nowPlayingInfo.title && fav.title && 
-                          this.nowPlayingInfo.title.trim() === fav.title.trim();
-      const uriMatches = this.nowPlayingInfo.uri && fav.uri && 
-                        this.nowPlayingInfo.uri.trim() === fav.uri.trim();
-      
+      const titleMatches =
+        this.nowPlayingInfo.title &&
+        fav.title &&
+        this.nowPlayingInfo.title.trim() === fav.title.trim();
+      const uriMatches =
+        this.nowPlayingInfo.uri &&
+        fav.uri &&
+        this.nowPlayingInfo.uri.trim() === fav.uri.trim();
+
       const isPlaying = titleMatches || uriMatches;
 
       if (isPlaying) {

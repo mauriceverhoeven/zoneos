@@ -2,13 +2,14 @@
 
 import logging
 
-from zoneos.api import create_app, sonos_controller
-from zoneos.sonos import SonosController
+from zoneos.api import create_app
+from zoneos.config import config
+from zoneos.controller import SonosController
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s:%(lineno)d - %(levelname)s - %(message)s",
+    level=getattr(logging, config.log_level),
+    format=config.log_format,
 )
 
 logger = logging.getLogger(__name__)
@@ -16,8 +17,6 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Initialize and run the Flask application."""
-    global sonos_controller
-
     logger.info("Starting ZoneOS...")
 
     # Initialize Sonos controller
@@ -28,10 +27,10 @@ def main():
     # Create Flask app
     app = create_app()
 
-    logger.info("ZoneOS ready! Server starting on http://0.0.0.0:8000")
+    logger.info(f"ZoneOS ready! Server starting on http://{config.host}:{config.port}")
 
-    # Run Flask development server with auto-reload
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    # Run Flask development server
+    app.run(host=config.host, port=config.port, debug=config.debug)
 
 
 if __name__ == "__main__":

@@ -4,12 +4,10 @@ import logging
 
 from flask import Flask, jsonify, request, send_from_directory
 
-from zoneos.sonos import SonosController
-
 logger = logging.getLogger(__name__)
 
 # Global controller instance
-sonos_controller: SonosController | None = None
+sonos_controller = None
 
 
 def create_app() -> Flask:

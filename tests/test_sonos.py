@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from zoneos.sonos import SonosController
+from zoneos.controller import SonosController
 
 
 @pytest.fixture

@@ -201,7 +201,8 @@ class SonosController:
                 speaker.join(coordinator)
 
             logger.info(
-                f"Created group with coordinator {coordinator.player_name} and {len(speakers_to_group)-1} members"
+                f"Created group with coordinator {coordinator.player_name} "
+                f"and {len(speakers_to_group)-1} members"
             )
             return True
         except SoCoException as e:
@@ -295,7 +296,8 @@ class SonosController:
                     # Set new coordinator
                     self._group_coordinator = new_coordinator
 
-                    # Join remaining speakers (except new coordinator and old coordinator) to new coordinator
+                    # Join remaining speakers (except new coordinator and old
+                    # coordinator) to new coordinator
                     for member_name in remaining_members[1:]:
                         member_speaker = self.get_speaker(member_name)
                         if (
@@ -309,7 +311,8 @@ class SonosController:
                     speaker.unjoin()
 
                     logger.info(
-                        f"Removed coordinator {speaker_name}, promoted {new_coordinator_name} to coordinator"
+                        f"Removed coordinator {speaker_name}, "
+                        f"promoted {new_coordinator_name} to coordinator"
                     )
             else:
                 # Regular member, just unjoin
