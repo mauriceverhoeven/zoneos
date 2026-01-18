@@ -320,13 +320,13 @@ class ZoneOS {
       );
       const volData = await volResp.json();
       const currentVol = volData.volume || 50;
-      
+
       // Calculate new volume
       let newVol = currentVol + delta;
-      
+
       // Round to nearest multiple of 5
       newVol = Math.round(newVol / 5) * 5;
-      
+
       // Clamp to 0-100 range
       newVol = Math.max(0, Math.min(100, newVol));
 
@@ -365,7 +365,10 @@ class ZoneOS {
         container.innerHTML = `<div class="grid gap-3">${items.join("")}</div>`;
         this.highlightCurrentFavorite();
       } else {
-        container.innerHTML = this.createEmptyState("Geen favorieten gevonden", true);
+        container.innerHTML = this.createEmptyState(
+          "Geen favorieten gevonden",
+          true
+        );
       }
     } catch (error) {
       container.innerHTML = this.createErrorState(
@@ -393,7 +396,7 @@ class ZoneOS {
 
     return `
             <div 
-                onclick="app.playFavorite(${index})"
+                onclick="app.playFavorite(${index - 1})"
                 class="favorite-item flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-transparent transition-all duration-200 cursor-pointer hover:bg-gray-50 hover:border-indigo-500 hover:shadow-lg hover:translate-x-1 active:translate-x-0.5 min-w-0 shadow-sm"
             >
                 ${albumArt}
@@ -410,7 +413,7 @@ class ZoneOS {
   }
 
   /**
-   * Play a favorite by index
+   * Play a favorite by index (receives 0-based index from API)
    */
   async playFavorite(index) {
     if (this.selectedSpeakers.size === 0) {

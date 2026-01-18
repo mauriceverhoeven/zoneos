@@ -20,6 +20,7 @@ class SonosController:
         self.favorites = FavoritesManager()
         self.groups = GroupManager()
         self.playback = PlaybackController()
+        self.current_favorite_index = 0  # Track currently playing favorite
 
         # Initialize favorites
         if self.speakers.list_speakers():
@@ -95,7 +96,7 @@ class SonosController:
             return False
 
     def play_favorite_by_index(self, index: int) -> bool:
-        """Play a favorite by its index (1-based) on the group coordinator."""
+        """Play a favorite by its index (0-based) on the group coordinator."""
         try:
             coordinator = self.groups.get_coordinator()
             if not coordinator:
@@ -116,10 +117,33 @@ class SonosController:
             self.playback.play_uri_with_metadata(
                 coordinator, favorite["uri"], favorite["metadata"]
             )
+            # Track the current favorite index
+            self.current_favorite_index = index
             logger.info(f"Playing favorite #{index} '{favorite['title']}' on group")
             return True
         except Exception as e:
             logger.error(f"Failed to play favorite by index: {e}")
+            return False
+
+    def play_next_favorite(self) -> bool:
+        """Play the next favorite in the list with rollover.
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            favorites = self.get_favorites()
+            if not favorites:
+                logger.error("No favorites available to play")
+                return False
+
+            # Move to next index with rollover (all 0-based)
+            next_index = (self.current_favorite_index + 1) % len(favorites)
+
+            # Play the favorite (already 0-based)
+            return self.play_favorite_by_index(next_index)
+        except Exception as e:
+            logger.error(f"Failed to play next favorite: {e}")
             return False
 
     # Playback operations

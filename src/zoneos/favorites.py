@@ -78,11 +78,11 @@ class FavoritesManager:
         raise FavoriteNotFoundError(f"Favorite '{title}' not found")
 
     def get_by_index(self, speaker: soco.SoCo, index: int) -> dict[str, str]:
-        """Get a favorite by its index (1-based) and return full favorite object.
+        """Get a favorite by its index (0-based) and return full favorite object.
 
         Args:
             speaker: SoCo speaker instance to query
-            index: 1-based index of favorite
+            index: 0-based index of favorite
 
         Returns:
             Dictionary with favorite data including metadata
@@ -91,10 +91,10 @@ class FavoritesManager:
             IndexError: If index out of range
             FavoriteNotFoundError: If favorite at index not found
         """
-        if index < 1 or index > len(self._favorites):
+        if index < 0 or index >= len(self._favorites):
             raise IndexError(
-                f"Invalid favorite index: {index} (must be 1-{len(self._favorites)})"
+                f"Invalid favorite index: {index} (must be 0-{len(self._favorites)-1})"
             )
 
-        favorite = self._favorites[index - 1]
+        favorite = self._favorites[index]
         return self.get_by_title(speaker, favorite["title"])

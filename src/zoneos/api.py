@@ -182,7 +182,7 @@ def create_app() -> Flask:
 
     @app.route("/api/play-favorite-index", methods=["POST"])
     def play_favorite_index():
-        """Play a favorite by index (1-based) on the group."""
+        """Play a favorite by index (0-based) on the group."""
         if not sonos_controller:
             return jsonify({"error": "Controller not initialized"}), 503
 
@@ -192,8 +192,8 @@ def create_app() -> Flask:
 
         index = data["index"]
 
-        if not isinstance(index, int) or index < 1:
-            return jsonify({"error": "Index must be a positive integer"}), 400
+        if not isinstance(index, int) or index < 0:
+            return jsonify({"error": "Index must be a non-negative integer"}), 400
 
         success = sonos_controller.play_favorite_by_index(index)
         if success:
@@ -201,6 +201,19 @@ def create_app() -> Flask:
                 {"status": "ok", "message": f"Playing favorite #{index} on group"}
             )
         return jsonify({"error": "Failed to play favorite"}), 400
+
+    @app.route("/api/next", methods=["GET"])
+    def play_next_favorite():
+        """Play the next favorite in the list (with rollover)."""
+        if not sonos_controller:
+            return jsonify({"error": "Controller not initialized"}), 503
+
+        success = sonos_controller.play_next_favorite()
+        if success:
+            return jsonify(
+                {"status": "ok", "message": "Playing next favorite on group"}
+            )
+        return jsonify({"error": "Failed to play next favorite"}), 400
 
     @app.route("/api/now-playing", methods=["GET"])
     def get_now_playing():

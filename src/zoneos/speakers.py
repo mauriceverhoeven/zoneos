@@ -65,7 +65,7 @@ class SpeakerManager:
 
     def set_volume(self, speaker_name: str, volume: int) -> None:
         """Set volume for the specified speaker (0-100).
-        
+
         Volume is automatically rounded to the nearest multiple of 5.
 
         Args:

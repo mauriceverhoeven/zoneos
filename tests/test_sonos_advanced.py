@@ -100,17 +100,17 @@ def test_set_volume_boundary_values(mock_soco_discover, mock_speaker):
     # Test clamping below min (rounds to -10 -> -10, clamps to 0)
     controller.set_volume("Living Room", -10)
     assert mock_speaker.volume == 0
-    
+
     # Test rounding to nearest 5
     controller.set_volume("Living Room", 23)  # Should round to 25
     assert mock_speaker.volume == 25
-    
+
     controller.set_volume("Living Room", 22)  # Should round to 20
     assert mock_speaker.volume == 20
-    
+
     controller.set_volume("Living Room", 27)  # Should round to 25
     assert mock_speaker.volume == 25
-    
+
     controller.set_volume("Living Room", 28)  # Should round to 30
     assert mock_speaker.volume == 30
 
@@ -242,13 +242,13 @@ def test_remove_last_speaker(mock_soco_discover, mock_speaker):
 def test_play_favorite_by_index_success(
     mock_soco_discover, mock_speaker, mock_favorite
 ):
-    """Test playing favorite by index."""
+    """Test playing favorite by index (0-based)."""
     mock_speaker.music_library.get_sonos_favorites.return_value = [mock_favorite]
     mock_speaker.music_library.get_favorite_radio_stations.return_value = []
     mock_soco_discover.return_value = [mock_speaker]
 
     controller = SonosController()
-    result = controller.play_favorite_by_index(1)
+    result = controller.play_favorite_by_index(0)
 
     assert result is True
     mock_speaker.play_uri.assert_called()
@@ -262,12 +262,12 @@ def test_play_favorite_by_index_invalid(mock_soco_discover, mock_speaker):
 
     controller = SonosController()
 
-    # Test index too high
-    result = controller.play_favorite_by_index(99)
+    # Test index out of bounds (no favorites available)
+    result = controller.play_favorite_by_index(0)
     assert result is False
 
-    # Test index too low
-    result = controller.play_favorite_by_index(0)
+    # Test negative index
+    result = controller.play_favorite_by_index(-1)
     assert result is False
 
 
@@ -387,3 +387,89 @@ def test_initialize_creates_group_when_not_playing(mock_soco_discover, mock_spea
     # Verify unjoin was called to reset groups
     for speaker in mock_speakers:
         speaker.unjoin.assert_called()
+
+
+def test_play_next_favorite_success(mock_soco_discover, mock_speaker):
+    """Test playing next favorite advances through the list."""
+    from unittest.mock import MagicMock
+
+    # Create multiple favorites
+    fav1 = MagicMock()
+    fav1.title = "Favorite 1"
+    fav1.get_uri.return_value = "uri1"
+    fav1.resource_meta_data = "<DIDL-Lite>1</DIDL-Lite>"
+
+    fav2 = MagicMock()
+    fav2.title = "Favorite 2"
+    fav2.get_uri.return_value = "uri2"
+    fav2.resource_meta_data = "<DIDL-Lite>2</DIDL-Lite>"
+
+    fav3 = MagicMock()
+    fav3.title = "Favorite 3"
+    fav3.get_uri.return_value = "uri3"
+    fav3.resource_meta_data = "<DIDL-Lite>3</DIDL-Lite>"
+
+    mock_speaker.music_library.get_sonos_favorites.return_value = [fav1, fav2, fav3]
+    mock_speaker.music_library.get_favorite_radio_stations.return_value = []
+    mock_soco_discover.return_value = [mock_speaker]
+
+    controller = SonosController()
+
+    # First call: starts at index 0, calculates next as (0+1)%3=1, plays favorite at index 1, sets index to 1
+    result = controller.play_next_favorite()
+    assert result is True
+    assert (
+        controller.current_favorite_index == 1
+    )  # Played favorite at index 1 (second favorite)
+
+    # Second call: at index 1, calculates next as (1+1)%3=2, plays favorite at index 2, sets index to 2
+    result = controller.play_next_favorite()
+    assert result is True
+    assert (
+        controller.current_favorite_index == 2
+    )  # Played favorite at index 2 (third favorite)
+
+    # Third call: at index 2, calculates next as (2+1)%3=0, plays favorite at index 0, sets index to 0
+    result = controller.play_next_favorite()
+    assert result is True
+    assert controller.current_favorite_index == 0  # Rolled over to first favorite
+
+
+def test_play_next_favorite_rollover(mock_soco_discover, mock_speaker):
+    """Test that play_next_favorite rolls over to the beginning."""
+    from unittest.mock import MagicMock
+
+    fav1 = MagicMock()
+    fav1.title = "Favorite 1"
+    fav1.get_uri.return_value = "uri1"
+    fav1.resource_meta_data = "<DIDL-Lite>1</DIDL-Lite>"
+
+    fav2 = MagicMock()
+    fav2.title = "Favorite 2"
+    fav2.get_uri.return_value = "uri2"
+    fav2.resource_meta_data = "<DIDL-Lite>2</DIDL-Lite>"
+
+    mock_speaker.music_library.get_sonos_favorites.return_value = [fav1, fav2]
+    mock_speaker.music_library.get_favorite_radio_stations.return_value = []
+    mock_soco_discover.return_value = [mock_speaker]
+
+    controller = SonosController()
+
+    # Play through the list
+    controller.play_next_favorite()  # index 0 -> plays index 1, sets to 1
+    controller.play_next_favorite()  # index 1 -> plays index 0 (rollover), sets to 0
+
+    # Verify we rolled over to index 0
+    assert controller.current_favorite_index == 0
+
+
+def test_play_next_favorite_no_favorites(mock_soco_discover, mock_speaker):
+    """Test play_next_favorite when no favorites available."""
+    mock_speaker.music_library.get_sonos_favorites.return_value = []
+    mock_speaker.music_library.get_favorite_radio_stations.return_value = []
+    mock_soco_discover.return_value = [mock_speaker]
+
+    controller = SonosController()
+
+    result = controller.play_next_favorite()
+    assert result is False

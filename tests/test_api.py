@@ -251,19 +251,19 @@ def test_play_favorite_by_index_success(client_with_controller, mock_controller)
 
     response = client_with_controller.post(
         "/api/play-favorite-index",
-        data=json.dumps({"index": 1}),
+        data=json.dumps({"index": 0}),
         content_type="application/json",
     )
 
     assert response.status_code == 200
-    mock_controller.play_favorite_by_index.assert_called_once_with(1)
+    mock_controller.play_favorite_by_index.assert_called_once_with(0)
 
 
 def test_play_favorite_by_index_invalid(client_with_controller):
     """Test POST /api/play-favorite-index with invalid index."""
     response = client_with_controller.post(
         "/api/play-favorite-index",
-        data=json.dumps({"index": 0}),
+        data=json.dumps({"index": -1}),
         content_type="application/json",
     )
     assert response.status_code == 400
@@ -299,3 +299,23 @@ def test_get_group_status(client_with_controller, mock_controller):
     assert "members" in data
     assert "volumes" in data
     assert len(data["members"]) == 2
+
+
+def test_play_next_favorite_success(client_with_controller, mock_controller):
+    """Test GET /api/next endpoint."""
+    mock_controller.play_next_favorite.return_value = True
+
+    response = client_with_controller.get("/api/next")
+    assert response.status_code == 200
+
+    data = json.loads(response.data)
+    assert data["status"] == "ok"
+    mock_controller.play_next_favorite.assert_called_once()
+
+
+def test_play_next_favorite_failure(client_with_controller, mock_controller):
+    """Test GET /api/next when no favorites available."""
+    mock_controller.play_next_favorite.return_value = False
+
+    response = client_with_controller.get("/api/next")
+    assert response.status_code == 400
